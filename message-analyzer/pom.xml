@@ -8,7 +8,7 @@
 		<version>3.5.6</version>
 		<relativePath/> <!-- lookup parent from repository -->
 	</parent>
-	<groupId>com.hiretrack.message-analyzer </groupId>
+	<groupId>com.hiretrack.message-analyzer</groupId>
 	<artifactId>message-analyzer</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
 	<name>message-analyzer</name>
@@ -28,6 +28,7 @@
 	</scm>
 	<properties>
 		<java.version>17</java.version>
+		<spring-ai.version>1.1.8</spring-ai.version>
 	</properties>
 	<dependencies>
 		<dependency>
@@ -62,22 +63,16 @@
 			<groupId>org.springframework.cloud</groupId>
 			<artifactId>spring-cloud-commons</artifactId>
 		</dependency>
+		<!-- Source: https://mvnrepository.com/artifact/org.springframework.ai/spring-ai-model -->
 		<dependency>
 			<groupId>org.springframework.ai</groupId>
 			<artifactId>spring-ai-model</artifactId>
-			<version>1.1.0-M3</version>
 		</dependency>
-<!--		<dependency>-->
-<!--			<groupId>org.springframework.ai</groupId>-->
-<!--			<artifactId>spring-ai-mistral-ai</artifactId>-->
-<!--			<version>1.0.3</version>-->
-<!--		</dependency>-->
+		<!-- Source: https://mvnrepository.com/artifact/org.springframework.ai/spring-ai-starter-model-google-genai -->
 		<dependency>
 			<groupId>org.springframework.ai</groupId>
-			<artifactId>spring-ai-starter-model-mistral-ai</artifactId>
+			<artifactId>spring-ai-starter-model-ollama</artifactId>
 		</dependency>
-
-
 	</dependencies>
 
 	<dependencyManagement>
@@ -86,7 +81,7 @@
 			<dependency>
 				<groupId>org.springframework.ai</groupId>
 				<artifactId>spring-ai-bom</artifactId>
-				<version>1.0.0-SNAPSHOT</version>
+				<version>${spring-ai.version}</version>
 				<type>pom</type>
 				<scope>import</scope>
 			</dependency>
@@ -150,14 +145,7 @@
 				</snapshots>
 			</repository>
 
-		<repository>
-			<id>spring-snapshots</id>
-			<name>Spring Snapshots</name>
-			<url>https://repo.spring.io/snapshot</url>
-			<releases>
-				<enabled>false</enabled>
-			</releases>
-		</repository>
+
 	</repositories>
 
 

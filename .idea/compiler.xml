@@ -9,6 +9,7 @@
         <outputRelativeToContentRoot value="true" />
         <module name="eurekaserver" />
         <module name="messageAnalyzer" />
+        <module name="messageanalyzer" />
       </profile>
       <profile name="Annotation profile for job-management" enabled="true">
         <sourceOutputDir name="target/generated-sources/annotations" />
@@ -19,12 +20,11 @@
         </processorPath>
         <module name="job-management" />
       </profile>
-      <profile name="Annotation profile for message-extractor" enabled="true">
+      <profile name="Annotation profile for message-analyzer" enabled="true">
         <sourceOutputDir name="target/generated-sources/annotations" />
         <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
         <outputRelativeToContentRoot value="true" />
         <processorPath useClasspath="false">
-          <entry name="$MAVEN_REPOSITORY$/org/projectlombok/lombok/1.18.40/lombok-1.18.40.jar" />
           <entry name="$MAVEN_REPOSITORY$/org/projectlombok/lombok/1.18.40/lombok-1.18.40.jar" />
         </processorPath>
         <module name="message-extractor" />
@@ -45,6 +45,7 @@
       <module name="message-extractor" options="-parameters" />
       <module name="messageAnalyzer" options="-parameters" />
       <module name="messageAnalyzer (1)" options="-parameters" />
+      <module name="messageanalyzer" options="-parameters" />
     </option>
   </component>
 </project>

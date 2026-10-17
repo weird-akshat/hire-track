@@ -1,7 +1,16 @@
 spring:
   ai:
-    mistralai:
-      api-key: ${MISTRALAI_API_KEY}
+    ollama:
+      chat:
+        model: qwen2.5:1.5b
+      base:
+        url: 127.0.0.1
+    google:
+      genai:
+        api-key: ${MISTRALAI_API_KEY}
+        chat:
+          options:
+            model: gemini-3.8-flash
 
   application:
     name: message-analyzer
