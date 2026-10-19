@@ -1,9 +1,12 @@
 package com.hiretrack.message_analyzer.message_analyzer.service;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.hiretrack.message_analyzer.message_analyzer.client.EntityManagerClient;
 import com.hiretrack.message_analyzer.message_analyzer.dto.*;
+import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
+import org.springframework.resilience.annotation.Retryable;
 import org.springframework.stereotype.Service;
 import tools.jackson.databind.ObjectMapper;
 
@@ -17,15 +20,20 @@ import static com.hiretrack.message_analyzer.message_analyzer.enums.ResponseType
 public class AiService {
     private final ChatClient chatClient;
     private final EntityManagerClient entityManagerClient;
-    public AiService(ChatClient.Builder chatClientBuilder, EntityManagerClient entityManagerClient){
+    private  final ObjectMapper objectMapper;
+    private final StructuredMessageService structuredMessageService;
+    public AiService(ChatClient.Builder chatClientBuilder, EntityManagerClient entityManagerClient, ObjectMapper objectMapper, StructuredMessageService structuredMessageService){
         this.chatClient = chatClientBuilder.build();
         this.entityManagerClient= entityManagerClient;
+        this.objectMapper = objectMapper;
+        this.structuredMessageService = structuredMessageService;
     }
     public void analyze(List<InputMessage> list){
         try{
             List<AiResponse> aiResponses= new ArrayList<>();
             for (InputMessage inputMessage : list){
-                AiResponse aiResponse = getStructuredMessage(inputMessage);
+                String classification = structuredMessageService.classify(inputMessage);
+                AiResponse aiResponse = structuredMessageService.getStructuredMessage(inputMessage,classification);
                 aiResponse.setOriginalText(inputMessage.toString());
                 aiResponses.add(aiResponse);
             }
@@ -88,68 +96,5 @@ public class AiService {
             }
         }
     }
-    public AiResponse getStructuredMessage(InputMessage inputMessage){
-        String text= inputMessage.getText();
-        AiResponse aiResponse = new AiResponse();
-
-        String prompt = """
-        Classifiy this message among the following:   JOB_LISTING,
-                                                                    JOB_UPDATE,
-                                                                    NOTIFCATION,
-                                                                    SHORTLIST,
-        only return the classification and nothing else. Just a single word.
-
-    
-    """.formatted(text);
-
-        String additionalInstruction = "give raw json as plain text, no markdown code fences. JSON COMPLETENESS RULES:\n" +
-                "- Generate the entire JSON object before ending the response.\n" +
-                "- Every opening { must have a matching closing }.\n" +
-                "- Every opening [ must have a matching closing ].\n" +
-                "- Close all nested objects and arrays before closing the root object.\n" +
-                "- Do not stop generation while any field value, string, array, or object is incomplete.\n" +
-                "- Include all required fields, even when their values are empty.\n" +
-                "- Do not omit the final closing brace of the root JSON object.\n" +
-                "- Do not append any text after the completed JSON object.\n" +
-                "- Before responding, verify that the complete output is syntactically valid JSON\n" +
-                "  and can be parsed as one complete object.\n" +
-                "- If information is missing, use the specified default value instead of\n" +
-                "  leaving a field unfinished.";
-        try{
-            String response  = chatClient.prompt(text).user(u->u.text(prompt)).call().content();
-
-            System.out.println(response);
-            if (response==null){
-                throw new RuntimeException("AI response Null");
-            }
-            if (response.equals("JOB_LISTING")){
-                String jobListingPrompt =JobListing.prompt()+ additionalInstruction;
-                String jobListingString = chatClient.prompt(text).user(u->u.text(jobListingPrompt)).call().content();
-                System.out.println(jobListingString);
-
-                ObjectMapper objectMapper = new ObjectMapper();
-
-                JobListing jobListing =
-                        objectMapper.readValue(jobListingString, JobListing.class);
-                jobListing.setSourceId(inputMessage.getSourceId());
-
-                System.out.println(jobListing.toString());
-
-            }
-            if (aiResponse.getShortlist()!=null){
-                aiResponse.getShortlist().setSourceId(inputMessage.getSourceId());
-            }
-            if (aiResponse.getJobNotification()!=null){
-                aiResponse.getJobNotification().setSourceId(inputMessage.getSourceId());
-            }
-            log.info("Response returned from LLM: {}", aiResponse.toString());
-            return aiResponse;
-        }
-        catch (Exception e){
-            log.error("AI Response Error: "+e.toString());
-            throw new RuntimeException("ERROR: AI RESPONSE");
-        }
-    }
-
 
 }
