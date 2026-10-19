@@ -9,7 +9,6 @@
         <outputRelativeToContentRoot value="true" />
         <module name="eurekaserver" />
         <module name="messageAnalyzer" />
-        <module name="messageanalyzer" />
       </profile>
       <profile name="Annotation profile for job-management" enabled="true">
         <sourceOutputDir name="target/generated-sources/annotations" />
@@ -20,7 +19,7 @@
         </processorPath>
         <module name="job-management" />
       </profile>
-      <profile name="Annotation profile for message-analyzer" enabled="true">
+      <profile name="Annotation profile for message-extractor" enabled="true">
         <sourceOutputDir name="target/generated-sources/annotations" />
         <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
         <outputRelativeToContentRoot value="true" />
@@ -29,10 +28,19 @@
         </processorPath>
         <module name="message-extractor" />
         <module name="entity-manager" />
+      </profile>
+      <profile name="Annotation profile for message-analyzer" enabled="true">
+        <sourceOutputDir name="target/generated-sources/annotations" />
+        <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
+        <outputRelativeToContentRoot value="true" />
+        <processorPath useClasspath="false">
+          <entry name="$MAVEN_REPOSITORY$/org/projectlombok/lombok/1.18.46/lombok-1.18.46.jar" />
+        </processorPath>
         <module name="message-analyzer" />
       </profile>
     </annotationProcessing>
     <bytecodeTargetLevel>
+      <module name="messageanalyzer" target="17" />
       <module name="messageAnalyzer (1)" target="17" />
     </bytecodeTargetLevel>
   </component>

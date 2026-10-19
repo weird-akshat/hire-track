@@ -2,9 +2,9 @@ spring:
   ai:
     ollama:
       chat:
-        model: qwen2.5:1.5b
+        model: llama3.1:latest
       base:
-        url: 127.0.0.1
+        url: http://localhost:11435
     google:
       genai:
         api-key: ${MISTRALAI_API_KEY}

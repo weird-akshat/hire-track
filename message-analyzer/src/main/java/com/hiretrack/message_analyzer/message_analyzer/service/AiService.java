@@ -1,9 +1,12 @@
 package com.hiretrack.message_analyzer.message_analyzer.service;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.hiretrack.message_analyzer.message_analyzer.client.EntityManagerClient;
 import com.hiretrack.message_analyzer.message_analyzer.dto.*;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.stereotype.Service;
+import tools.jackson.databind.ObjectMapper;
+
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -87,14 +90,51 @@ public class AiService {
     }
     public AiResponse getStructuredMessage(InputMessage inputMessage){
         String text= inputMessage.getText();
-        String prompt = "Extract relevant fields; normalize company names (remove suffixes like 'OT','Inc.'); abbreviate branches (no spaces, exclude 'BTech'); parse all dates into LocalDateTime as ISO-8601 strings in yyyy-MM-dd'T'HH:mm:ss format without timezone, even from natural language; never return dates as objects containing '$date'; always create a notification object with concise message (detailed only if objectType='notification'); select proper enum; leave unknowns null except for numeric primitive fields, which must use 0 for int and 0.0 for double; always return valid JSON matching the Java DTO types; for all Map<String,String> fields, return a JSON object with string keys and string values, using {} if unknown; for all List<String> fields, return a JSON array of strings, using [] if unknown; never return a string or array for a Map field; use empty strings for unknown String fields unless explicitly allowed to be null; classify job listing changes (OT/interview postponement, new details) as 'jobupdate'; always ensure JSON is properly closed and minimal; if a jobUpdate exists, still include a notification; responseType should be NOTIFICATION only if no other object apart from notification is being created. If a message begins with caption: xxx.pdf format, classify it as job update and make it a job update object. If a message has a registration link given, classify it as joblisting and make it a jobListing object. If it's a job description, classify it as job update and create a jobUpdate object, not a jobListing. Keep the job role an empty string if no job role is found. Set originalText as an empty string. Ensure every field matches its Java DTO type, including nested objects. DO NOT WRAP THE JSON IN MARKDOWN CODE FENCES (e.g., ```json or ```).";        AiResponse aiResponse;
+        AiResponse aiResponse = new AiResponse();
+
+        String prompt = """
+        Classifiy this message among the following:   JOB_LISTING,
+                                                                    JOB_UPDATE,
+                                                                    NOTIFCATION,
+                                                                    SHORTLIST,
+        only return the classification and nothing else. Just a single word.
+
+    
+    """.formatted(text);
+
+        String additionalInstruction = "give raw json as plain text, no markdown code fences. JSON COMPLETENESS RULES:\n" +
+                "- Generate the entire JSON object before ending the response.\n" +
+                "- Every opening { must have a matching closing }.\n" +
+                "- Every opening [ must have a matching closing ].\n" +
+                "- Close all nested objects and arrays before closing the root object.\n" +
+                "- Do not stop generation while any field value, string, array, or object is incomplete.\n" +
+                "- Include all required fields, even when their values are empty.\n" +
+                "- Do not omit the final closing brace of the root JSON object.\n" +
+                "- Do not append any text after the completed JSON object.\n" +
+                "- Before responding, verify that the complete output is syntactically valid JSON\n" +
+                "  and can be parsed as one complete object.\n" +
+                "- If information is missing, use the specified default value instead of\n" +
+                "  leaving a field unfinished.";
         try{
-            aiResponse = chatClient.prompt(text).user(u->u.text(prompt)).call().entity(AiResponse.class);
-            if (aiResponse==null){
+            String response  = chatClient.prompt(text).user(u->u.text(prompt)).call().content();
+
+            System.out.println(response);
+            if (response==null){
                 throw new RuntimeException("AI response Null");
             }
-            if (aiResponse.getJobListing()!=null){
-                aiResponse.getJobListing().setSourceId(inputMessage.getSourceId());
+            if (response.equals("JOB_LISTING")){
+                String jobListingPrompt =JobListing.prompt()+ additionalInstruction;
+                String jobListingString = chatClient.prompt(text).user(u->u.text(jobListingPrompt)).call().content();
+                System.out.println(jobListingString);
+
+                ObjectMapper objectMapper = new ObjectMapper();
+
+                JobListing jobListing =
+                        objectMapper.readValue(jobListingString, JobListing.class);
+                jobListing.setSourceId(inputMessage.getSourceId());
+
+                System.out.println(jobListing.toString());
+
             }
             if (aiResponse.getShortlist()!=null){
                 aiResponse.getShortlist().setSourceId(inputMessage.getSourceId());
@@ -106,7 +146,7 @@ public class AiService {
             return aiResponse;
         }
         catch (Exception e){
-            log.error("AI Response Error");
+            log.error("AI Response Error: "+e.toString());
             throw new RuntimeException("ERROR: AI RESPONSE");
         }
     }
