@@ -1,12 +1,8 @@
 package com.hiretrack.message_analyzer.message_analyzer.service;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.hiretrack.message_analyzer.message_analyzer.client.EntityManagerClient;
 import com.hiretrack.message_analyzer.message_analyzer.dto.*;
-import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
-import org.springframework.resilience.annotation.Retryable;
 import org.springframework.stereotype.Service;
 import tools.jackson.databind.ObjectMapper;
 
@@ -17,23 +13,24 @@ import static com.hiretrack.message_analyzer.message_analyzer.enums.ResponseType
 
 @Slf4j
 @Service
-public class AiService {
+public class MessageAnalyzeService {
     private final ChatClient chatClient;
     private final EntityManagerClient entityManagerClient;
-    private  final ObjectMapper objectMapper;
-    private final StructuredMessageService structuredMessageService;
-    public AiService(ChatClient.Builder chatClientBuilder, EntityManagerClient entityManagerClient, ObjectMapper objectMapper, StructuredMessageService structuredMessageService){
+    
+    private final LlmService llmService;
+    public MessageAnalyzeService(ChatClient.Builder chatClientBuilder, EntityManagerClient entityManagerClient, ObjectMapper objectMapper, LlmService llmService){
         this.chatClient = chatClientBuilder.build();
         this.entityManagerClient= entityManagerClient;
-        this.objectMapper = objectMapper;
-        this.structuredMessageService = structuredMessageService;
+        this.llmService = llmService;
     }
     public void analyze(List<InputMessage> list){
         try{
             List<AiResponse> aiResponses= new ArrayList<>();
             for (InputMessage inputMessage : list){
-                String classification = structuredMessageService.classify(inputMessage);
-                AiResponse aiResponse = structuredMessageService.getStructuredMessage(inputMessage,classification);
+                String classification = llmService.classify(inputMessage);
+                AiResponse aiResponse = llmService.getStructuredMessage(inputMessage,classification);
+                JobNotification jobNotification = llmService.getNotification(inputMessage);
+                aiResponse.setJobNotification(jobNotification);
                 aiResponse.setOriginalText(inputMessage.toString());
                 aiResponses.add(aiResponse);
             }
@@ -44,7 +41,7 @@ public class AiService {
             throw new RuntimeException(e.getMessage());
         }
     }
-    public void saveToEntity(List<AiResponse> aiResponses){
+    private void saveToEntity(List<AiResponse> aiResponses){
         for (AiResponse aiResponse: aiResponses){
             if (aiResponse.getResponseType()==JOB_LISTING){
                 log.info("JOB LISTING: : {}", aiResponse.getJobListing().toString());
